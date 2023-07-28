@@ -28,7 +28,6 @@ class ExpenseTrackerApp {
     private final JTextArea textArea, reportTextArea;
     private final SimpleDateFormat dateFormat;
 
-
     public ExpenseTrackerApp() {
         expenseTracker = new ExpenseTracker();
         dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -210,6 +209,7 @@ class ExpenseTrackerApp {
 
             expenseTracker.recordExpense(category, amount, date);
             updateTextArea();
+            reportTextArea.setText("Expense added successfully.");
         } catch (ParseException ex) {
             showErrorDialog("Invalid date format! Use YYYY-MM-DD");
         } catch (NumberFormatException ex) {
@@ -234,6 +234,7 @@ class ExpenseTrackerApp {
 
                 expenseTracker.modifyExpense(expenseId, newCategory, newAmount, newDate);
                 updateTextArea();
+                reportTextArea.setText("Expense modified successfully.");
             } else {
                 showErrorDialog("Expense with ID " + expenseId + " not found.");
             }
@@ -248,6 +249,7 @@ class ExpenseTrackerApp {
             int expenseId = Integer.parseInt(expenseIdField.getText());
             expenseTracker.deleteExpense(expenseId);
             updateTextArea();
+            reportTextArea.setText("Expense deleted successfully.");
         } catch (NumberFormatException ex) {
             showErrorDialog("Invalid Expense ID format! Enter a valid number.");
         }
@@ -341,6 +343,7 @@ class ExpenseTrackerApp {
         if (option == JOptionPane.YES_OPTION) {
             expenseTracker.deleteLoadedExpenses();
             updateTextArea();
+            reportTextArea.setText("Loaded expenses deleted successfully");
         }
     }
 
@@ -550,15 +553,29 @@ class ExpenseTracker implements Serializable {
             return "Failed to save expenses: " + e.getMessage();
         }
     }
+    private int findMaxExpenseId() {
+        int maxId = 0;
+        for (Expense expense : expenses) {
+            if (expense.getExpenseId() > maxId) {
+                maxId = expense.getExpenseId();
+            }
+        }
+        return maxId;
+    }
 
     public String loadExpenses(File file) {
         try (ObjectInputStream inputStream = new ObjectInputStream(new FileInputStream(file))) {
             expenses = (List<Expense>) inputStream.readObject();
+
+            // Find the maximum expense ID from the loaded expenses and set nextExpenseId accordingly
+            nextExpenseId = findMaxExpenseId() + 1;
+
             return "Expenses loaded successfully!";
         } catch (IOException | ClassNotFoundException e) {
             return "Failed to load expenses: " + e.getMessage();
         }
     }
+
     public void deleteLoadedExpenses() {
         expenses.clear();
         System.out.println("Loaded expenses deleted.");
