@@ -9,6 +9,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Calendar;
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -20,11 +22,11 @@ class ExpenseTrackerApp {
         new ExpenseTrackerApp();
     }
 
-    private ExpenseTracker expenseTracker;
-    private JFrame frame;
-    private JTextField categoryField, amountField, startDateField, endDateField, expenseIdField;
-    private JTextArea textArea;
-    private SimpleDateFormat dateFormat;
+    private final ExpenseTracker expenseTracker;
+    private final JFrame frame;
+    private final JTextField categoryField, amountField, startDateField, endDateField, expenseIdField;
+    private final JTextArea textArea, reportTextArea;
+    private final SimpleDateFormat dateFormat;
 
 
     public ExpenseTrackerApp() {
@@ -53,6 +55,14 @@ class ExpenseTrackerApp {
         JButton saveToFileButton = new JButton("Save Expenses to File");
         JButton loadFromFileButton = new JButton("Load Expenses from File");
         JButton deleteLoadedButton = new JButton("Delete Loaded Expenses");
+        JButton exitButton = new JButton("Exit");
+        exitButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                exitApplication();
+            }
+        });
+
 
         addButton.addActionListener(new ActionListener() {
             @Override
@@ -106,16 +116,21 @@ class ExpenseTrackerApp {
         generateMonthlyReportButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                generateMonthlyReport();
+                String report = generateMonthlyReport();
+                if (report != null) {
+                    reportTextArea.setText(report);
+                }
             }
         });
 
         generateCategoryWiseReportButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                generateCategoryWiseReport();
+                String report = generateCategoryWiseReport();
+                reportTextArea.setText(report);
             }
         });
+
 
         saveToFileButton.addActionListener(new ActionListener() {
             @Override
@@ -160,13 +175,22 @@ class ExpenseTrackerApp {
         inputPanel.add(saveToFileButton);
         inputPanel.add(loadFromFileButton);
         inputPanel.add(deleteLoadedButton);
+        inputPanel.add(exitButton);
 
         textArea = new JTextArea(20, 60);
         textArea.setEditable(false);
-        JScrollPane scrollPane = new JScrollPane(textArea);
+        JScrollPane textScrollPane = new JScrollPane(textArea);
 
-        frame.add(inputPanel, BorderLayout.NORTH);
-        frame.add(scrollPane, BorderLayout.CENTER);
+        reportTextArea = new JTextArea(10, 60);
+        reportTextArea.setEditable(false);
+        JScrollPane reportScrollPane = new JScrollPane(reportTextArea);
+
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.add(inputPanel, BorderLayout.NORTH);
+        mainPanel.add(textScrollPane, BorderLayout.CENTER);
+        mainPanel.add(reportScrollPane, BorderLayout.SOUTH);
+
+        frame.add(mainPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
         frame.setVisible(true);
@@ -266,39 +290,51 @@ class ExpenseTrackerApp {
         }
     }
 
-    private void generateMonthlyReport() {
-        try {
-            int month = Integer.parseInt(categoryField.getText());
-            int year = Integer.parseInt(amountField.getText());
-            expenseTracker.generateMonthlyExpenseReport(month, year);
-        } catch (NumberFormatException ex) {
-            showErrorDialog("Invalid month or year format! Enter valid numbers.");
-        }
+    private String generateMonthlyReport() {
+        return expenseTracker.generateMonthlyExpenseReport();
     }
 
-    private void generateCategoryWiseReport() {
-        expenseTracker.generateCategoryWiseExpenseReport();
+
+    private String generateCategoryWiseReport() {
+        return expenseTracker.generateCategoryWiseExpenseReport();
     }
+
+
 
     private void saveExpensesToFile() {
-        String fileName = JOptionPane.showInputDialog(frame, "Enter the file name to save expenses:", "Save Expenses to File", JOptionPane.PLAIN_MESSAGE);
-        if (fileName != null && !fileName.trim().isEmpty()) {
-            expenseTracker.saveExpensesToFile(fileName);
-            updateTextArea();
-        } else {
-            showErrorDialog("Please enter a valid file name.");
+        JFileChooser fileChooser = new JFileChooser();
+        int option = fileChooser.showSaveDialog(frame);
+
+        if (option == JFileChooser.APPROVE_OPTION) {
+            File file = fileChooser.getSelectedFile();
+            String success = expenseTracker.saveExpenses(file);
+
+            if (success!=null) {
+                reportTextArea.setText("Expenses saved successfully to " + file.getAbsolutePath());
+            } else {
+                reportTextArea.setText("Failed to save expenses to " + file.getAbsolutePath());
+            }
         }
     }
 
     private void loadExpensesFromFile() {
-        String fileName = JOptionPane.showInputDialog(frame, "Enter the file name to load expenses:", "Load Expenses from File", JOptionPane.PLAIN_MESSAGE);
-        if (fileName != null && !fileName.trim().isEmpty()) {
-            expenseTracker.loadExpensesFromFile(fileName);
-            updateTextArea();
-        } else {
-            showErrorDialog("Please enter a valid file name.");
+        JFileChooser fileChooser = new JFileChooser();
+        int option = fileChooser.showOpenDialog(frame);
+
+        if (option == JFileChooser.APPROVE_OPTION) {
+            File file = fileChooser.getSelectedFile();
+            String result = expenseTracker.loadExpenses(file);
+
+            if (result != null) {
+                updateTextArea();
+                reportTextArea.setText(result);
+            } else {
+                reportTextArea.setText("Failed to load expenses from " + file.getAbsolutePath());
+            }
         }
     }
+
+
 
     private void deleteLoadedExpenses() {
         int option = JOptionPane.showConfirmDialog(frame, "Are you sure you want to delete loaded expenses?", "Delete Loaded Expenses", JOptionPane.YES_NO_OPTION);
@@ -327,6 +363,12 @@ class ExpenseTrackerApp {
 
     private void showErrorDialog(String errorMessage) {
         JOptionPane.showMessageDialog(frame, errorMessage, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+    private void exitApplication() {
+        // Perform any cleanup tasks here (optional)
+
+        // Exit the application
+        System.exit(0);
     }
 }
 
@@ -456,54 +498,67 @@ class ExpenseTracker implements Serializable {
         return result;
     }
 
-    public void generateMonthlyExpenseReport(int month, int year) {
-        List<Expense> result = new ArrayList<>();
+    public String generateMonthlyExpenseReport() {
+        StringBuilder report = new StringBuilder();
+        report.append("Monthly Expense Report for All Months\n");
+
+        // Group expenses by month and year
+        HashMap<String, Double> monthMap = new HashMap<>();
+        SimpleDateFormat monthYearFormat = new SimpleDateFormat("MM/yyyy");
+
         for (Expense expense : expenses) {
-            Date expenseDate = expense.getDate();
-            int expenseMonth = Integer.parseInt(dateFormat.format(expenseDate).split("-")[1]);
-            int expenseYear = Integer.parseInt(dateFormat.format(expenseDate).split("-")[0]);
-            if (expenseMonth == month && expenseYear == year) {
-                result.add(expense);
-            }
+            String monthYear = monthYearFormat.format(expense.getDate());
+            double amount = monthMap.getOrDefault(monthYear, 0.0) + expense.getAmount();
+            monthMap.put(monthYear, amount);
         }
 
-        System.out.println("Monthly Expense Report for " + month + "-" + year + ":");
-        for (Expense expense : result) {
-            System.out.println(expense);
+        // Generate report for each month
+        double total = 0;
+        for (HashMap.Entry<String, Double> entry : monthMap.entrySet()) {
+            String monthYear = entry.getKey();
+            double amount = entry.getValue();
+            report.append("Month/Year: ").append(monthYear).append(", Total Expenses: ").append(amount).append("\n");
+            total += amount;
         }
+
+        report.append("Total Expenses for All Months: ").append(total).append("\n");
+        return report.toString();
     }
 
-    public void generateCategoryWiseExpenseReport() {
-        System.out.println("Category-wise Expense Report:");
-        for (Expense expense : expenses) {
-            System.out.println(expense.getCategory() + ": " + expense.getAmount());
-        }
-    }
 
-    public void saveExpensesToFile(String fileName) {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(fileName))) {
-            oos.writeObject(expenses);
-            System.out.println("Expenses saved to file: " + fileName);
+    public String generateCategoryWiseExpenseReport() {
+        StringBuilder report = new StringBuilder();
+        report.append("Category-wise Expense Report\n");
+
+        HashMap<String, Double> categoryMap = new HashMap<>();
+        for (Expense expense : expenses) {
+            String category = expense.getCategory();
+            categoryMap.put(category, categoryMap.getOrDefault(category, 0.0) + expense.getAmount());
+        }
+
+        for (HashMap.Entry<String, Double> entry : categoryMap.entrySet()) {
+            report.append("Category: ").append(entry.getKey()).append(", Total Expenses: ").append(entry.getValue()).append("\n");
+        }
+
+        return report.toString();
+    }
+    public String saveExpenses(File file) {
+        try (ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream(file))) {
+            outputStream.writeObject(expenses);
+            return "Expenses saved successfully!";
         } catch (IOException e) {
-            e.printStackTrace();
-            System.out.println("Failed to save expenses to file: " + fileName);
+            return "Failed to save expenses: " + e.getMessage();
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public void loadExpensesFromFile(String fileName) {
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(fileName))) {
-            Object obj = ois.readObject();
-            if (obj instanceof List<?>) {
-                expenses = (List<Expense>) obj;
-                System.out.println("Expenses loaded from file: " + fileName);
-            }
+    public String loadExpenses(File file) {
+        try (ObjectInputStream inputStream = new ObjectInputStream(new FileInputStream(file))) {
+            expenses = (List<Expense>) inputStream.readObject();
+            return "Expenses loaded successfully!";
         } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-            System.out.println("Failed to load expenses from file: " + fileName);
+            return "Failed to load expenses: " + e.getMessage();
         }
     }
-
     public void deleteLoadedExpenses() {
         expenses.clear();
         System.out.println("Loaded expenses deleted.");
