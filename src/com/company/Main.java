@@ -1,253 +1,356 @@
 package com.company;
-
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
-import java.text.*;
-import java.util.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
-class ExpenseTracker {
-    private List<Expense> expenses;
-    private final Map<String, List<Expense>> categories;
-    private String loadedFileName;
-    private int nextExpenseId;
-
-    public ExpenseTracker() {
-        expenses = new ArrayList<>();
-        categories = new HashMap<>();
-        loadedFileName = "";
-        nextExpenseId = 1;
+class ExpenseTrackerApp {
+    public static void main(String[] args) {
+        new ExpenseTrackerApp();
     }
 
-    public void recordExpense(int year, int month, int day, double amount, String category, String description) {
-        Date date = Expense.parseDate(year, month, day);
-        if (date != null && !date.after(new Date())) {
-            Expense expense = new Expense(nextExpenseId, date, amount, category, description);
-            expenses.add(expense);
-            categories.computeIfAbsent(category, k -> new ArrayList<>()).add(expense);
-            nextExpenseId++;
-            System.out.println("Expense recorded successfully.");
-        } else {
-            System.out.println("Invalid date. Expense not recorded.");
+    private ExpenseTracker expenseTracker;
+    private JFrame frame;
+    private JTextField categoryField, amountField, startDateField, endDateField, expenseIdField;
+    private JTextArea textArea;
+    private SimpleDateFormat dateFormat;
+
+
+    public ExpenseTrackerApp() {
+        expenseTracker = new ExpenseTracker();
+        dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+
+        frame = new JFrame("Expense Tracker");
+        frame.setLayout(new BorderLayout());
+
+        JPanel inputPanel = new JPanel();
+        inputPanel.setLayout(new GridLayout(7, 2, 5, 5));
+        categoryField = new JTextField();
+        amountField = new JTextField();
+        startDateField = new JTextField();
+        endDateField = new JTextField();
+        expenseIdField = new JTextField();
+        JButton addButton = new JButton("Add Expense");
+        JButton modifyButton = new JButton("Modify Expense");
+        JButton deleteButton = new JButton("Delete Expense");
+        JButton viewAllButton = new JButton("View All Expenses");
+        JButton viewByCategoryButton = new JButton("View Expenses by Category");
+        JButton viewByDateRangeButton = new JButton("View Expenses by Date Range");
+        JButton viewByIdButton = new JButton("View Expense by ID");
+        JButton generateMonthlyReportButton = new JButton("Generate Monthly Expense Report");
+        JButton generateCategoryWiseReportButton = new JButton("Generate Category-wise Expense Report");
+        JButton saveToFileButton = new JButton("Save Expenses to File");
+        JButton loadFromFileButton = new JButton("Load Expenses from File");
+        JButton deleteLoadedButton = new JButton("Delete Loaded Expenses");
+
+        addButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                addExpense();
+            }
+        });
+
+        modifyButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                modifyExpense();
+            }
+        });
+
+        deleteButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                deleteExpense();
+            }
+        });
+
+        viewAllButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                viewAllExpenses();
+            }
+        });
+
+        viewByCategoryButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                viewExpensesByCategory();
+            }
+        });
+
+        viewByDateRangeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                viewExpensesByDateRange();
+            }
+        });
+
+        viewByIdButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                viewExpenseById();
+            }
+        });
+
+        generateMonthlyReportButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                generateMonthlyReport();
+            }
+        });
+
+        generateCategoryWiseReportButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                generateCategoryWiseReport();
+            }
+        });
+
+        saveToFileButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                saveExpensesToFile();
+            }
+        });
+
+        loadFromFileButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                loadExpensesFromFile();
+            }
+        });
+
+        deleteLoadedButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                deleteLoadedExpenses();
+            }
+        });
+
+        inputPanel.add(new JLabel("Category:"));
+        inputPanel.add(categoryField);
+        inputPanel.add(new JLabel("Amount:"));
+        inputPanel.add(amountField);
+        inputPanel.add(new JLabel("Start Date (YYYY-MM-DD):"));
+        inputPanel.add(startDateField);
+        inputPanel.add(new JLabel("End Date (YYYY-MM-DD):"));
+        inputPanel.add(endDateField);
+        inputPanel.add(new JLabel("Expense ID:"));
+        inputPanel.add(expenseIdField);
+        inputPanel.add(addButton);
+        inputPanel.add(modifyButton);
+        inputPanel.add(deleteButton);
+        inputPanel.add(viewAllButton);
+        inputPanel.add(viewByCategoryButton);
+        inputPanel.add(viewByDateRangeButton);
+        inputPanel.add(viewByIdButton);
+        inputPanel.add(generateMonthlyReportButton);
+        inputPanel.add(generateCategoryWiseReportButton);
+        inputPanel.add(saveToFileButton);
+        inputPanel.add(loadFromFileButton);
+        inputPanel.add(deleteLoadedButton);
+
+        textArea = new JTextArea(20, 60);
+        textArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(textArea);
+
+        frame.add(inputPanel, BorderLayout.NORTH);
+        frame.add(scrollPane, BorderLayout.CENTER);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.pack();
+        frame.setVisible(true);
+    }
+
+    private void addExpense() {
+        try {
+            String category = categoryField.getText();
+            double amount = Double.parseDouble(amountField.getText());
+            Date date = dateFormat.parse(startDateField.getText());
+
+            // Validate if the date is greater than the present date
+            if (date.after(new Date())) {
+                showErrorDialog("Invalid date! Please enter a date on or before the present date.");
+                return;
+            }
+
+            expenseTracker.recordExpense(category, amount, date);
+            updateTextArea();
+        } catch (ParseException ex) {
+            showErrorDialog("Invalid date format! Use YYYY-MM-DD");
+        } catch (NumberFormatException ex) {
+            showErrorDialog("Invalid amount format! Enter a valid number.");
         }
     }
 
-    public void modifyExpense(int expenseId, int year, int month, int day, double amount, String category, String description) {
-        Expense expense = getExpenseById(expenseId);
-        if (expense != null) {
-            Date newDate = Expense.parseDate(year, month, day);
-            if (newDate != null && !newDate.after(new Date())) {
-                expense.setDate(newDate);
-                expense.setAmount(amount);
-                categories.get(expense.getCategory()).remove(expense);
-                expense.setCategory(category);
-                categories.computeIfAbsent(category, k -> new ArrayList<>()).add(expense);
-                expense.setDescription(description);
-                System.out.println("Expense modified successfully.");
+    private void modifyExpense() {
+        try {
+            int expenseId = Integer.parseInt(expenseIdField.getText());
+            Expense expense = expenseTracker.getExpenseById(expenseId);
+            if (expense != null) {
+                String newCategory = categoryField.getText();
+                double newAmount = Double.parseDouble(amountField.getText());
+                Date newDate = dateFormat.parse(startDateField.getText());
+
+                // Validate if the date is greater than the present date
+                if (newDate.after(new Date())) {
+                    showErrorDialog("Invalid date! Please enter a date on or before the present date.");
+                    return;
+                }
+
+                expenseTracker.modifyExpense(expenseId, newCategory, newAmount, newDate);
+                updateTextArea();
             } else {
-                System.out.println("Invalid date. Expense not modified.");
+                showErrorDialog("Expense with ID " + expenseId + " not found.");
             }
-        } else {
-            System.out.println("Expense not found.");
+        } catch (ParseException ex) {
+            showErrorDialog("Invalid date format! Use YYYY-MM-DD");
+        } catch (NumberFormatException ex) {
+            showErrorDialog("Invalid amount format! Enter a valid number.");
+        }
+    }
+    private void deleteExpense() {
+        try {
+            int expenseId = Integer.parseInt(expenseIdField.getText());
+            expenseTracker.deleteExpense(expenseId);
+            updateTextArea();
+        } catch (NumberFormatException ex) {
+            showErrorDialog("Invalid Expense ID format! Enter a valid number.");
         }
     }
 
-    public void deleteExpense(int expenseId) {
-        Expense expense = getExpenseById(expenseId);
-        if (expense != null) {
-            expenses.remove(expense);
-            categories.get(expense.getCategory()).remove(expense);
-            System.out.println("Expense deleted successfully.");
+    private void viewAllExpenses() {
+        List<Expense> expenses = expenseTracker.getAllExpenses();
+        updateTextArea(expenses);
+    }
 
-            // Update the file after deleting the expense
-            saveExpensesToFile(loadedFileName);
-        } else {
-            System.out.println("Expense not found.");
+    private void viewExpensesByCategory() {
+        String category = categoryField.getText();
+        List<Expense> expenses = expenseTracker.getExpensesByCategory(category);
+        updateTextArea(expenses);
+    }
+
+    private void viewExpensesByDateRange() {
+        try {
+            Date startDate = dateFormat.parse(startDateField.getText());
+            Date endDate = dateFormat.parse(endDateField .getText());
+
+            List<Expense> expenses = expenseTracker.getExpensesByDateRange(startDate, endDate);
+            updateTextArea(expenses);
+        } catch (ParseException ex) {
+            showErrorDialog("Invalid date format! Use YYYY-MM-DD");
         }
     }
 
-    public void viewExpenses() {
-        if (expenses.isEmpty()) {
-            System.out.println("No expenses recorded.");
-        } else {
-            for (Expense expense : expenses) {
-                System.out.println(expense);
-            }
-        }
-    }
-
-    public void viewExpensesByCategory(String category) {
-        if (categories.containsKey(category)) {
-            List<Expense> categoryExpenses = categories.get(category);
-            if (categoryExpenses.isEmpty()) {
-                System.out.println("No expenses recorded in the category: " + category);
+    private void viewExpenseById() {
+        try {
+            int expenseId = Integer.parseInt(expenseIdField.getText());
+            Expense expense = expenseTracker.getExpenseById(expenseId);
+            if (expense != null) {
+                updateTextArea(expense);
             } else {
-                for (Expense expense : categoryExpenses) {
-                    System.out.println(expense);
-                }
+                showErrorDialog("Expense with ID " + expenseId + " not found.");
             }
+        } catch (NumberFormatException ex) {
+            showErrorDialog("Invalid Expense ID format! Enter a valid number.");
+        }
+    }
+
+    private void generateMonthlyReport() {
+        try {
+            int month = Integer.parseInt(categoryField.getText());
+            int year = Integer.parseInt(amountField.getText());
+            expenseTracker.generateMonthlyExpenseReport(month, year);
+        } catch (NumberFormatException ex) {
+            showErrorDialog("Invalid month or year format! Enter valid numbers.");
+        }
+    }
+
+    private void generateCategoryWiseReport() {
+        expenseTracker.generateCategoryWiseExpenseReport();
+    }
+
+    private void saveExpensesToFile() {
+        String fileName = JOptionPane.showInputDialog(frame, "Enter the file name to save expenses:", "Save Expenses to File", JOptionPane.PLAIN_MESSAGE);
+        if (fileName != null && !fileName.trim().isEmpty()) {
+            expenseTracker.saveExpensesToFile(fileName);
+            updateTextArea();
         } else {
-            System.out.println("Category not found.");
+            showErrorDialog("Please enter a valid file name.");
         }
     }
 
-    public void viewExpensesByDateRange(int startYear, int startMonth, int startDay, int endYear, int endMonth, int endDay) {
-        Date startDate = Expense.parseDate(startYear, startMonth, startDay);
-        Date endDate = Expense.parseDate(endYear, endMonth, endDay);
-        if (startDate != null && endDate != null) {
-            List<Expense> filteredExpenses = new ArrayList<>();
-            for (Expense expense : expenses) {
-                Date expenseDate = expense.getDate();
-                if (!expenseDate.before(startDate) && !expenseDate.after(endDate)) {
-                    filteredExpenses.add(expense);
-                }
-            }
-
-            if (filteredExpenses.isEmpty()) {
-                System.out.println("No expenses recorded within the specified date range.");
-            } else {
-                for (Expense expense : filteredExpenses) {
-                    System.out.println(expense);
-                }
-            }
+    private void loadExpensesFromFile() {
+        String fileName = JOptionPane.showInputDialog(frame, "Enter the file name to load expenses:", "Load Expenses from File", JOptionPane.PLAIN_MESSAGE);
+        if (fileName != null && !fileName.trim().isEmpty()) {
+            expenseTracker.loadExpensesFromFile(fileName);
+            updateTextArea();
         } else {
-            System.out.println("Invalid date range. Please enter valid start and end dates.");
+            showErrorDialog("Please enter a valid file name.");
         }
     }
 
-    public Expense getExpenseById(int expenseId) {
+    private void deleteLoadedExpenses() {
+        int option = JOptionPane.showConfirmDialog(frame, "Are you sure you want to delete loaded expenses?", "Delete Loaded Expenses", JOptionPane.YES_NO_OPTION);
+        if (option == JOptionPane.YES_OPTION) {
+            expenseTracker.deleteLoadedExpenses();
+            updateTextArea();
+        }
+    }
+
+    private void updateTextArea() {
+        List<Expense> expenses = expenseTracker.getAllExpenses();
+        updateTextArea(expenses);
+    }
+
+    private void updateTextArea(List<Expense> expenses) {
+        StringBuilder sb = new StringBuilder();
         for (Expense expense : expenses) {
-            if (expense.getId() == expenseId) {
-                return expense;
-            }
+            sb.append(expense).append("\n");
         }
-        return null;
+        textArea.setText(sb.toString());
     }
 
-    public void generateMonthlyExpenseReport(int month, int year) {
-        double totalExpenses = 0.0;
-        for (Expense expense : expenses) {
-            Calendar calendar = Calendar.getInstance();
-            calendar.setTime(expense.getDate());
-            int expenseMonth = calendar.get(Calendar.MONTH) + 1; // January is represented as 0
-            int expenseYear = calendar.get(Calendar.YEAR);
-            if (expenseMonth == month && expenseYear == year) {
-                totalExpenses += expense.getAmount();
-            }
-        }
-        System.out.println("Monthly Expense Report for " + month + "/" + year);
-        System.out.println("Total Expenses: ₹" + totalExpenses);
+    private void updateTextArea(Expense expense) {
+        textArea.setText(expense.toString());
     }
 
-    public void generateCategoryWiseExpenseReport() {
-        System.out.println("Category-wise Expense Report");
-        for (String category : categories.keySet()) {
-            double totalExpenses = 0.0;
-            List<Expense> categoryExpenses = categories.get(category);
-            for (Expense expense : categoryExpenses) {
-                totalExpenses += expense.getAmount();
-            }
-            System.out.println("Category: " + category);
-            System.out.println("Total Expenses: ₹" + totalExpenses);
-        }
-    }
-
-    public void saveExpensesToFile(String fileName) {
-        try (FileOutputStream fileOutputStream = new FileOutputStream(fileName);
-             ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream)) {
-            objectOutputStream.writeObject(expenses);
-            System.out.println("Expenses saved successfully.");
-        } catch (IOException e) {
-            System.out.println("Error occurred while saving expenses: " + e.getMessage());
-        }
-    }
-
-    public void loadExpensesFromFile(String fileName) {
-        try (FileInputStream fileInputStream = new FileInputStream(fileName);
-             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream)) {
-            List<Expense> loadedExpenses = (List<Expense>) objectInputStream.readObject();
-
-            // Assign new IDs to loaded expenses to avoid clashes with existing ones
-            for (Expense expense : loadedExpenses) {
-                expense.setId(nextExpenseId++);
-            }
-
-            expenses.addAll(loadedExpenses);
-            updateCategoriesMap();
-            loadedFileName = fileName; // Update the loaded file name
-            System.out.println("Expenses loaded successfully.");
-        } catch (IOException | ClassNotFoundException e) {
-            System.out.println("Error occurred while loading expenses: " + e.getMessage());
-        }
-    }
-
-    public void deleteLoadedExpenses() {
-        if (!loadedFileName.isEmpty()) {
-            try {
-                File file = new File(loadedFileName);
-                if (file.exists()) {
-                    file.delete();
-                    expenses.removeIf(expense -> expense.getId() >= nextExpenseId);
-                    updateCategoriesMap();
-                    loadedFileName = "";
-                    System.out.println("Loaded expenses deleted successfully.");
-                } else {
-                    System.out.println("File not found: " + loadedFileName);
-                }
-            } catch (Exception e) {
-                System.out.println("Error occurred while deleting loaded expenses: " + e.getMessage());
-            }
-        } else {
-            System.out.println("No expenses are currently loaded.");
-        }
-    }
-
-    private void updateCategoriesMap() {
-        categories.clear();
-        for (Expense expense : expenses) {
-            String category = expense.getCategory();
-            categories.computeIfAbsent(category, k -> new ArrayList<>()).add(expense);
-        }
+    private void showErrorDialog(String errorMessage) {
+        JOptionPane.showMessageDialog(frame, errorMessage, "Error", JOptionPane.ERROR_MESSAGE);
     }
 }
 
 class Expense implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private int id;
-    private Date date;
-    private double amount;
+    private int expenseId;
     private String category;
-    private String description;
+    private double amount;
+    private Date date;
 
-    public Expense(int id, Date date, double amount, String category, String description) {
-        this.id = id;
-        this.date = date;
-        this.amount = amount;
+    public Expense(int expenseId, String category, double amount, Date date) {
+        this.expenseId = expenseId;
         this.category = category;
-        this.description = description;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public Date getDate() {
-        return date;
-    }
-
-    public void setDate(Date date) {
+        this.amount = amount;
         this.date = date;
     }
 
-    public double getAmount() {
-        return amount;
+    public int getExpenseId() {
+        return expenseId;
     }
 
-    public void setAmount(double amount) {
-        this.amount = amount;
+    public void setExpenseId(int expenseId) {
+        this.expenseId = expenseId;
     }
 
     public String getCategory() {
@@ -258,169 +361,152 @@ class Expense implements Serializable {
         this.category = category;
     }
 
-    public String getDescription() {
-        return description;
+    public double getAmount() {
+        return amount;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setAmount(double amount) {
+        this.amount = amount;
     }
 
-    public static Date parseDate(int year, int month, int day) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setLenient(false);
-        calendar.set(year, month - 1, day);
-        try {
-            return calendar.getTime();
-        } catch (IllegalArgumentException e) {
-            System.out.println("Invalid date. Please enter a valid year, month, and day.");
-            return null;
-        }
+    public Date getDate() {
+        return date;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
     }
 
     @Override
     public String toString() {
-        return "ID: " + id +
-                ", Date: " + formatDate(date) +
-                ", Amount: ₹" + amount +
-                ", Category: " + category +
-                ", Description: " + description;
-    }
-
-    private String formatDate(Date date) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        return dateFormat.format(date);
+        return "Expense{" +
+                "expenseId=" + expenseId +
+                ", category='" + category + '\'' +
+                ", amount=" + amount +
+                ", date=" + date +
+                '}';
     }
 }
 
-class ExpenseTrackerApp {
-    public static void main(String[] args) {
-        ExpenseTracker expenseTracker = new ExpenseTracker();
-        Scanner scanner = new Scanner(System.in);
 
-        while (true) {
-            System.out.println("Expense Tracker");
-            System.out.println("1. Record Expense");
-            System.out.println("2. Modify Expense");
-            System.out.println("3. Delete Expense");
-            System.out.println("4. View All Expenses");
-            System.out.println("5. View Expenses by Category");
-            System.out.println("6. View Expenses by Date Range");
-            System.out.println("7. View Expenses by ExpenseId");
-            System.out.println("8. Generate Monthly Expense Report");
-            System.out.println("9. Generate Category-wise Expense Report");
-            System.out.println("10. Save Expenses to File");
-            System.out.println("11. Load Expenses from File");
-            System.out.println("12. Delete Loaded Expenses");
-            System.out.println("0. Exit");
-            System.out.print("Enter your choice: ");
-            int choice = scanner.nextInt();
 
-            switch (choice) {
-                case 0:
-                    System.out.println("Exiting the application.");
-                    System.exit(0);
-                    break;
-                case 1:
-                    System.out.print("Enter the year: ");
-                    int year = scanner.nextInt();
-                    System.out.print("Enter the month: ");
-                    int month = scanner.nextInt();
-                    System.out.print("Enter the day: ");
-                    int day = scanner.nextInt();
-                    System.out.print("Enter the amount: ");
-                    double amount = scanner.nextDouble();
-                    System.out.print("Enter the category: ");
-                    String category = scanner.next();
-                    System.out.print("Enter the description: ");
-                    scanner.nextLine();
-                    String description = scanner.nextLine();
-                    expenseTracker.recordExpense(year, month, day, amount, category, description);
-                    break;
-                case 2:
-                    System.out.print("Enter the expense ID: ");
-                    int expenseId = scanner.nextInt();
-                    System.out.print("Enter the new year: ");
-                    year = scanner.nextInt();
-                    System.out.print("Enter the new month: ");
-                    month = scanner.nextInt();
-                    System.out.print("Enter the new day: ");
-                    day = scanner.nextInt();
-                    System.out.print("Enter the new amount: ");
-                    amount = scanner.nextDouble();
-                    System.out.print("Enter the new category: ");
-                    category = scanner.next();
-                    System.out.print("Enter the new description: ");
-                    scanner.nextLine();
-                    description = scanner.nextLine();
-                    expenseTracker.modifyExpense(expenseId, year, month, day, amount, category, description);
-                    break;
-                case 3:
-                    System.out.print("Enter the expense ID: ");
-                    expenseId = scanner.nextInt();
-                    expenseTracker.deleteExpense(expenseId);
-                    break;
-                case 4:
-                    expenseTracker.viewExpenses();
-                    break;
-                case 5:
-                    System.out.print("Enter the category: ");
-                    category = scanner.next();
-                    expenseTracker.viewExpensesByCategory(category);
-                    break;
-                case 6:
-                    System.out.print("Enter the start year: ");
-                    int startYear = scanner.nextInt();
-                    System.out.print("Enter the start month: ");
-                    int startMonth = scanner.nextInt();
-                    System.out.print("Enter the start day: ");
-                    int startDay = scanner.nextInt();
-                    System.out.print("Enter the end year: ");
-                    int endYear = scanner.nextInt();
-                    System.out.print("Enter the end month: ");
-                    int endMonth = scanner.nextInt();
-                    System.out.print("Enter the end day: ");
-                    int endDay = scanner.nextInt();
-                    expenseTracker.viewExpensesByDateRange(startYear, startMonth, startDay, endYear, endMonth, endDay);
-                    break;
-                case 7:
-                    System.out.println("Enter the expenseId: ");
-                    expenseId = scanner.nextInt();
-                    Expense expense = expenseTracker.getExpenseById(expenseId);
-                    if (expense != null) {
-                        System.out.println(expense);
-                    } else {
-                        System.out.println("Expense not found.");
-                    }
-                    break;
-                case 8:
-                    System.out.print("Enter the month: ");
-                    month = scanner.nextInt();
-                    System.out.print("Enter the year: ");
-                    year = scanner.nextInt();
-                    expenseTracker.generateMonthlyExpenseReport(month, year);
-                    break;
-                case 9:
-                    expenseTracker.generateCategoryWiseExpenseReport();
-                    break;
-                case 10:
-                    System.out.print("Enter the file name: ");
-                    String saveFileName = scanner.next();
-                    expenseTracker.saveExpensesToFile(saveFileName);
-                    break;
-                case 11:
-                    System.out.print("Enter the file name: ");
-                    String loadFileName = scanner.next();
-                    expenseTracker.loadExpensesFromFile(loadFileName);
-                    break;
-                case 12:
-                    expenseTracker.deleteLoadedExpenses();
-                    break;
-                default:
-                    System.out.println("Invalid choice. Please try again.");
-                    break;
-            }
-            System.out.println();
+class ExpenseTracker implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private List<Expense> expenses;
+    private int nextExpenseId;
+    private transient SimpleDateFormat dateFormat; // Transient field for SimpleDateFormat
+
+    public ExpenseTracker() {
+        expenses = new ArrayList<>();
+        nextExpenseId = 1;
+        dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+    }
+
+    public void recordExpense(String category, double amount, Date date) {
+        Expense expense = new Expense(nextExpenseId, category, amount, date);
+        nextExpenseId++;
+        expenses.add(expense);
+    }
+
+    public void modifyExpense(int expenseId, String newCategory, double newAmount, Date newDate) {
+        Expense expense = getExpenseById(expenseId);
+        if (expense != null) {
+            expense.setCategory(newCategory);
+            expense.setAmount(newAmount);
+            expense.setDate(newDate);
         }
     }
+
+    public void deleteExpense(int expenseId) {
+        expenses.removeIf(expense -> expense.getExpenseId() == expenseId);
+    }
+
+    public List<Expense> getAllExpenses() {
+        return expenses;
+    }
+
+    public Expense getExpenseById(int expenseId) {
+        for (Expense expense : expenses) {
+            if (expense.getExpenseId() == expenseId) {
+                return expense;
+            }
+        }
+        return null;
+    }
+
+    public List<Expense> getExpensesByCategory(String category) {
+        List<Expense> result = new ArrayList<>();
+        for (Expense expense : expenses) {
+            if (expense.getCategory().equalsIgnoreCase(category)) {
+                result.add(expense);
+            }
+        }
+        return result;
+    }
+
+    public List<Expense> getExpensesByDateRange(Date startDate, Date endDate) {
+        List<Expense> result = new ArrayList<>();
+        for (Expense expense : expenses) {
+            Date expenseDate = expense.getDate();
+            if (expenseDate.compareTo(startDate) >= 0 && expenseDate.compareTo(endDate) <= 0) {
+                result.add(expense);
+            }
+        }
+        return result;
+    }
+
+    public void generateMonthlyExpenseReport(int month, int year) {
+        List<Expense> result = new ArrayList<>();
+        for (Expense expense : expenses) {
+            Date expenseDate = expense.getDate();
+            int expenseMonth = Integer.parseInt(dateFormat.format(expenseDate).split("-")[1]);
+            int expenseYear = Integer.parseInt(dateFormat.format(expenseDate).split("-")[0]);
+            if (expenseMonth == month && expenseYear == year) {
+                result.add(expense);
+            }
+        }
+
+        System.out.println("Monthly Expense Report for " + month + "-" + year + ":");
+        for (Expense expense : result) {
+            System.out.println(expense);
+        }
+    }
+
+    public void generateCategoryWiseExpenseReport() {
+        System.out.println("Category-wise Expense Report:");
+        for (Expense expense : expenses) {
+            System.out.println(expense.getCategory() + ": " + expense.getAmount());
+        }
+    }
+
+    public void saveExpensesToFile(String fileName) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(fileName))) {
+            oos.writeObject(expenses);
+            System.out.println("Expenses saved to file: " + fileName);
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("Failed to save expenses to file: " + fileName);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public void loadExpensesFromFile(String fileName) {
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(fileName))) {
+            Object obj = ois.readObject();
+            if (obj instanceof List<?>) {
+                expenses = (List<Expense>) obj;
+                System.out.println("Expenses loaded from file: " + fileName);
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+            System.out.println("Failed to load expenses from file: " + fileName);
+        }
+    }
+
+    public void deleteLoadedExpenses() {
+        expenses.clear();
+        System.out.println("Loaded expenses deleted.");
+    }
 }
+
