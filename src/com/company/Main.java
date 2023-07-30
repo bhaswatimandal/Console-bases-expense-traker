@@ -578,7 +578,7 @@ class ExpenseTracker implements Serializable {
 
     public void deleteLoadedExpenses() {
         expenses.clear();
-        System.out.println("Loaded expenses deleted.");
+        //System.out.println("Loaded expenses deleted.");
     }
 }
 
